@@ -1,7 +1,9 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define MAX_STRING 25
 #define MAX_PROCESS 100
-
-#include <stdio.h>
 
 struct Process
 {
@@ -37,29 +39,67 @@ struct Node
 
 void printProcesses(struct Process sProcesses[], int nY)
 {
-
-    for (int i = 0; i < nY; i++)
+    int i;
+    for (i = 0; i < nY; i++)
     {
-        printf("Process ID: %d, Arrival Time: %d, Burst Time: %d", sProcesses[i].nPID, sProcesses[i].nArrival, sProcesses[i].nBurst, sProcesses[i].nRemain);
+        printf("Process ID: %d, Arrival Time: %d, Burst Time: %d\n", sProcesses[i].nPID, sProcesses[i].nArrival, sProcesses[i].nBurst, sProcesses[i].nRemain);
     }
 }
 
 void printOutput(struct Output sOutputs[], int nY)
 {
-    for (int i = 0; i < nY; i++)
+    int i;
+
+    for (i = 0; i < nY; i++)
     {
         printf("P[%d] ", sOutputs[i].nPID);
         struct Node *pCurrent = sOutputs[i].pHead;
         while (pCurrent != NULL)
         {
-            printf("Start Time %d End Time: %d | ", pCurrent->nStart, pCurrent->nEnd);
+            printf("Start time %d End time: %d | ", pCurrent->nStart, pCurrent->nEnd);
             pCurrent = pCurrent->pNext;
         }
-        printf("Wait Time: %d", sOutputs[i].nWait);
+        printf("Waiting time: %d\n", sOutputs[i].nWait);
     }
 }
 
-// sort by burst time
+void initializeOutput(struct Output sOutputs[], int nY)
+{
+    int i;
+    for (i = 0; i < nY; i++)
+    {
+        sOutputs[i].pHead = NULL;
+        sOutputs[i].pTail = NULL;
+    }
+}
+
+void pushNode(struct Output *sOutput, int nStart, int nEnd)
+{
+    struct Node *pTemp;
+    if ((pTemp = malloc(sizeof(struct Node))) == NULL)
+    {
+        printf("ERROR : not enough memory\n");
+    }
+    else
+    {
+        pTemp->nStart = nStart;
+        pTemp->nEnd = nEnd;
+        pTemp->pNext = NULL;
+
+        if (sOutput->pHead == NULL && sOutput->pTail == NULL)
+        {
+            sOutput->pHead = pTemp;
+            sOutput->pTail = pTemp;
+        }
+        else
+        {
+            sOutput->pTail->pNext = pTemp;
+            sOutput->pTail = pTemp;
+        }
+    }
+}
+
+// sort by burst time, break
 void sortBurst(struct Process sProcesses[], int nY)
 {
     int i, j;
@@ -108,81 +148,74 @@ void sortArrival(struct Process sProcesses[], int nY)
 int FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
     int i;
-    double dTotal = 0;
+    int nTotal = 0;
+    int nStart, nEnd;
 
     sortArrival(sProcesses, nY);
 
+    printProcesses(sProcesses, nY);
+    initializeOutput(sOutputs, nY);
+
     for (i = 0; i < nY; i++)
     {
-        if (sOutputs[i].pHead = malloc(sizeof(struct Node)) == NULL)
+        sOutputs[i].nPID = sProcesses[i].nPID;
+        if (i == 0)
         {
-            printf("ERROR : not enough memory\n");
+            nStart = sProcesses[i].nArrival;
         }
         else
         {
-            sOutputs[i].pTail = sOutputs[i].pHead;
-            sOutputs[i].nPID = sProcesses[i].nPID;
-            if (i == 0)
-            {
-                sOutputs[i].pHead->nStart = sProcesses[i].nArrival;
-            }
-            else
-            {
-                sOutputs[i].pHead->nStart = sOutputs[i - 1].pHead->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pHead->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pHead->nEnd, sProcesses[i].nArrival)
-            }
-            sOutputs[i].nWait = sOutputs[i].pHead->nStart - sProcesses[i].nArrival;
-            sOutputs[i].pHead->nEnd = sOutputs[i].pHead->nStart + sProcesses[i].nBurst;
-
-            dTotal += sOutputs[i].nWait;
-
-            sOutputs[i].pHead->pNext = NULL;
+            nStart = sOutputs[i - 1].pTail->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pTail->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pTail->nEnd, sProcesses[i].nArrival)
         }
+        sOutputs[i].nWait = nStart - sProcesses[i].nArrival;
+        nEnd = nStart + sProcesses[i].nBurst;
+
+        pushNode(&sOutputs[i], nStart, nEnd);
+
+        nTotal += sOutputs[i].nWait;
     }
 
-    return dTotal / nY;
+    printOutput(sOutputs, nY);
+    printf("Average waiting time: %.2lf\n", 1.0 * nTotal / nY);
+
+    return 1.0 * nTotal / nY;
 }
 
 int SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
     int i;
-    double dTotal = 0;
+    int nTotal = 0;
+    int nStart, nEnd;
 
     sortBurst(sProcesses, nY);
 
-    // remaining processes
+    initializeOutput(sOutputs, nY);
+
     for (i = 0; i < nY; i++)
     {
-        if (sOutputs[i].pHead = malloc(sizeof(struct Node)) == NULL)
+        sOutputs[i].nPID = sProcesses[i].nPID;
+        if (i == 0)
         {
-            printf("ERROR : not enough memory\n");
+            nStart = sProcesses[i].nArrival;
         }
         else
         {
-            sOutputs[i].pTail = sOutputs[i].pHead;
-            sOutputs[i].nPID = sProcesses[i].nPID;
-            if (i == 0)
-            {
-                sOutputs[i].pHead->nStart = sProcesses[i].nArrival;
-            }
-            else
-            {
-                sOutputs[i].pHead->nStart = sOutputs[i - 1].pHead->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pHead->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pHead->nEnd, sProcesses[i].nArrival)
-            }
-            sOutputs[i].nWait = sOutputs[i].pHead->nStart - sProcesses[i].nArrival;
-            sOutputs[i].pHead->nEnd = sOutputs[i].pHead->nStart + sProcesses[i].nBurst;
-
-            dTotal += sOutputs[i].nWait;
-
-            sOutputs[i].pHead->pNext = NULL;
+            nStart = sOutputs[i - 1].pTail->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pTail->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pTail->nEnd, sProcesses[i].nArrival)
         }
+        sOutputs[i].nWait = nStart - sProcesses[i].nArrival;
+        nEnd = nStart + sProcesses[i].nBurst;
+
+        pushNode(&sOutputs[i], nStart, nEnd);
+
+        nTotal += sOutputs[i].nWait;
     }
 
-    return dTotal / nY;
+    return 1.0 * nTotal / nY;
 }
 
 // RETURNS THE INDEX???
 // CAN INSERT A TIME TICK -> ub
-int getMinRemaining(struct Process sProcesses[], int nY, int nCurrent)
+int getMinRemain(struct Process sProcesses[], int nY, int nCurrent)
 {
     int i;
     int minIndex = 0;
@@ -212,7 +245,7 @@ int getMinRemaining(struct Process sProcesses[], int nY, int nCurrent)
     }
 }
 
-void copyBurstToRemain(struct Process sProcesses[], int nY)
+void initializeRemain(struct Process sProcesses[], int nY)
 {
     int i;
     for (i = 0; i < nY; i++)
@@ -223,42 +256,35 @@ void copyBurstToRemain(struct Process sProcesses[], int nY)
 
 int SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
-    int nCurrIdx;
-    int nPrevIdx;
+    int nCurrIdx, nPrevIdx;
     int nTime = 0;
-    double dTotal = 0;
+    int nTotal = 0;
+    int nStart, nEnd;
 
     sortArrival(sProcesses, nY);
-    copyBurstToRemain(sProcesses, nY);
+
+    initializeOutput(sOutputs, nY);
+    initializeRemain(sProcesses, nY);
 
     // remaining processes
-    while ((nCurrIdx = getMinRemaining(sProcesses, nY, nTime)) != -1)
+    while ((nCurrIdx = getMinRemain(sProcesses, nY, nTime)) != -1)
     {
+        sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
 
-        if (sOutputs[nCurrIdx].pHead = malloc(sizeof(struct Node)) == NULL)
+        if (nCurrIdx == 0)
         {
-            printf("ERROR : not enough memory\n");
+            nStart = sProcesses[nCurrIdx].nArrival;
         }
         else
         {
-            sOutputs[nCurrIdx].pTail = sOutputs[nCurrIdx].pHead;
-            sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
-
-            if (nCurrIdx == 0)
-            {
-                sOutputs[nCurrIdx].pHead->nStart = sProcesses[nCurrIdx].nArrival;
-            }
-            else
-            {
-                sOutputs[nCurrIdx].pHead->nStart = sOutputs[nPrevIdx].pHead->nEnd > sProcesses[nCurrIdx].nArrival ? sOutputs[nPrevIdx].pHead->nEnd : sProcesses[nCurrIdx].nArrival; // max (sOutputs[nPrevIdx].pHead->nEnd, sProcesses[nCurrIdx].nArrival)
-            }
-            sOutputs[nCurrIdx].nWait = sOutputs[nCurrIdx].pHead->nStart - sProcesses[nCurrIdx].nArrival;
-            sOutputs[nCurrIdx].pHead->nEnd = sOutputs[nCurrIdx].pHead->nStart + sProcesses[nCurrIdx].nBurst;
-
-            dTotal += sOutputs[nCurrIdx].nWait;
-
-            sOutputs[nCurrIdx].pHead->pNext = NULL;
+            nStart = sOutputs[nPrevIdx].pTail->nEnd > sProcesses[nCurrIdx].nArrival ? sOutputs[nPrevIdx].pTail->nEnd : sProcesses[nCurrIdx].nArrival; // max (sOutputs[nPrevIdx].pTail->nEnd, sProcesses[nCurrIdx].nArrival)
         }
+        sOutputs[nCurrIdx].nWait = sOutputs[nCurrIdx].pTail->nStart - sProcesses[nCurrIdx].nArrival;
+        nEnd = sOutputs[nCurrIdx].pTail->nStart + sProcesses[nCurrIdx].nBurst;
+
+        pushNode(&sOutputs[nCurrIdx], nStart, nEnd);
+
+        nTotal += sOutputs[nCurrIdx].nWait;
 
         nTime++;
         sProcesses[nCurrIdx].nRemain--;
@@ -269,7 +295,7 @@ int SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 int RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
 {
     int isFinished = 1;
-    double dTotal = 0;
+    int nTotal = 0;
     sortArrival(sProcesses, nY);
 
     while (!isFinished)
@@ -284,7 +310,7 @@ int RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
                 // sOutputs[i].nStart = sOutputs[i - 1].nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].nEnd, sProcesses[i].nArrival)
                 // sOutputs[i].nWait = sOutputs[i].nStart - sProcesses[i].nArrival;
                 // sOutputs[i].nEnd = sOutputs[i].nStart + sProcesses[i].nBurst;
-                // dTotal += sOutputs[i].nWait;
+                // nTotal += sOutputs[i].nWait;
 
                 isFinished = 0;
             }
@@ -303,17 +329,19 @@ int main()
     printf("Input Filename: ");
     fgets(sFilename, MAX_STRING, stdin);
 
+    sFilename[strlen(sFilename) - 1] = '\0'; // replace \n with \0
+
     if ((pInput = fopen(sFilename, "r")) != NULL) // the file exists
     {
 
-        fscanf(pInput, "%d %d %d", nX, nY, nZ);
+        fscanf(pInput, "%d %d %d", &nX, &nY, &nZ);
 
         if (nX != 3)
             nZ = 1;
 
         for (i = 0; i < nY; i++)
         {
-            fscanf(pInput, "%d %d %d", sProcesses[i].nPID, sProcesses[i].nArrival, sProcesses[i].nBurst);
+            fscanf(pInput, "%d %d %d", &sProcesses[i].nPID, &sProcesses[i].nArrival, &sProcesses[i].nBurst);
         }
 
         switch (nX)
@@ -322,14 +350,16 @@ int main()
             FCFS(sProcesses, sOutputs, nY);
             break;
         case 1:
-            SJF(sProcesses, nY);
+            SJF(sProcesses, sOutputs, nY);
             break;
         case 2:
-            SRTF(sProcesses, nY);
+            SRTF(sProcesses, sOutputs, nY);
             break;
         case 3:
-            RR(sProcesses, nY, nZ);
+            RR(sProcesses, sOutputs, nY, nZ);
             break;
+        default:
+            printf("Invalid CPU Schedule Algorithm");
         }
 
         fclose(pInput);

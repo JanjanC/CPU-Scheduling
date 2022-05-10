@@ -4,6 +4,7 @@
 
 #define MAX_STRING 25
 #define MAX_PROCESS 100
+#define MAX_INT 2147483647
 
 struct Process
 {
@@ -37,32 +38,6 @@ struct Node
     struct Node *pNext;
 };
 
-void printProcesses(struct Process sProcesses[], int nY)
-{
-    int i;
-    for (i = 0; i < nY; i++)
-    {
-        printf("Process ID: %d, Arrival Time: %d, Burst Time: %d\n", sProcesses[i].nPID, sProcesses[i].nArrival, sProcesses[i].nBurst, sProcesses[i].nRemain);
-    }
-}
-
-void printOutput(struct Output sOutputs[], int nY)
-{
-    int i;
-
-    for (i = 0; i < nY; i++)
-    {
-        printf("P[%d] ", sOutputs[i].nPID);
-        struct Node *pCurrent = sOutputs[i].pHead;
-        while (pCurrent != NULL)
-        {
-            printf("Start time %d End time: %d | ", pCurrent->nStart, pCurrent->nEnd);
-            pCurrent = pCurrent->pNext;
-        }
-        printf("Waiting time: %d\n", sOutputs[i].nWait);
-    }
-}
-
 void initializeOutput(struct Output sOutputs[], int nY)
 {
     int i;
@@ -70,6 +45,7 @@ void initializeOutput(struct Output sOutputs[], int nY)
     {
         sOutputs[i].pHead = NULL;
         sOutputs[i].pTail = NULL;
+        sOutputs[i].nWait = 0;
     }
 }
 
@@ -145,15 +121,61 @@ void sortArrival(struct Process sProcesses[], int nY)
     }
 }
 
-int FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
+void sortEndTime(struct Output sOutputs[], int nY)
+{
+    int i, j;
+    struct Output sTemp;
+    for (i = 0; i < nY - 1; i++)
+    {
+        for (j = i + 1; j < nY; j++)
+        {
+            if (sOutputs[i].pTail->nEnd > sOutputs[j].pTail->nEnd)
+            {
+                sTemp = sOutputs[i];
+                sOutputs[i] = sOutputs[j];
+                sOutputs[j] = sTemp;
+            }
+        }
+    }
+}
+
+// For Testing
+void printProcesses(struct Process sProcesses[], int nY)
 {
     int i;
-    int nTotal = 0;
+    for (i = 0; i < nY; i++)
+    {
+        printf("Process ID: %d, Arrival Time: %d, Burst Time: %d\n", sProcesses[i].nPID, sProcesses[i].nArrival, sProcesses[i].nBurst, sProcesses[i].nRemain);
+    }
+}
+
+void printOutput(struct Output sOutputs[], int nY)
+{
+    int i;
+
+    sortEndTime(sOutputs, nY);
+
+    for (i = 0; i < nY; i++)
+    {
+        printf("P[%d] ", sOutputs[i].nPID);
+        struct Node *pCurrent = sOutputs[i].pHead;
+        while (pCurrent != NULL)
+        {
+            printf("Start time %d End time: %d | ", pCurrent->nStart, pCurrent->nEnd);
+            pCurrent = pCurrent->pNext;
+        }
+        printf("Waiting time: %d\n", sOutputs[i].nWait);
+    }
+}
+
+void FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
+{
+    int i;
+    int nTotalWait = 0;
     int nStart, nEnd;
 
     sortArrival(sProcesses, nY);
 
-    printProcesses(sProcesses, nY);
     initializeOutput(sOutputs, nY);
 
     for (i = 0; i < nY; i++)
@@ -167,24 +189,22 @@ int FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
         {
             nStart = sOutputs[i - 1].pTail->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pTail->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pTail->nEnd, sProcesses[i].nArrival)
         }
-        sOutputs[i].nWait = nStart - sProcesses[i].nArrival;
         nEnd = nStart + sProcesses[i].nBurst;
+        sOutputs[i].nWait = nStart - sProcesses[i].nArrival;
 
         pushNode(&sOutputs[i], nStart, nEnd);
 
-        nTotal += sOutputs[i].nWait;
+        nTotalWait += sOutputs[i].nWait;
     }
 
     printOutput(sOutputs, nY);
-    printf("Average waiting time: %.2lf\n", 1.0 * nTotal / nY);
-
-    return 1.0 * nTotal / nY;
+    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
 }
 
-int SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
+void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
     int i;
-    int nTotal = 0;
+    int nTotalWait = 0;
     int nStart, nEnd;
 
     sortBurst(sProcesses, nY);
@@ -202,46 +222,55 @@ int SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
         {
             nStart = sOutputs[i - 1].pTail->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pTail->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pTail->nEnd, sProcesses[i].nArrival)
         }
-        sOutputs[i].nWait = nStart - sProcesses[i].nArrival;
         nEnd = nStart + sProcesses[i].nBurst;
+        sOutputs[i].nWait = nStart - sProcesses[i].nArrival;
 
         pushNode(&sOutputs[i], nStart, nEnd);
 
-        nTotal += sOutputs[i].nWait;
+        nTotalWait += sOutputs[i].nWait;
     }
 
-    return 1.0 * nTotal / nY;
+    printOutput(sOutputs, nY);
+    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
 }
 
-// RETURNS THE INDEX???
-// CAN INSERT A TIME TICK -> ub
-int getMinRemain(struct Process sProcesses[], int nY, int nCurrent)
+int isFinished(struct Process sProcesses[], int nY)
 {
     int i;
-    int minIndex = 0;
-    int isFinished = 1;
-    // https://www.geeksforgeeks.org/program-for-shortest-job-first-sjf-scheduling-set-2-preemptive/?ref=rp
-
-    for (i = 1; i < nY && sProcesses[i].nArrival <= nCurrent; i++)
-    {
-        if (sProcesses[minIndex].nRemain == 0 || sProcesses[i].nRemain < sProcesses[minIndex].nRemain)
-            minIndex = i;
-    }
-
     for (i = 0; i < nY; i++)
     {
         if (sProcesses[i].nRemain != 0)
-            isFinished = 0;
+            return 0; // 0 - not yet finished
     }
 
-    if (isFinished)
+    return 1; // 1 - is finished
+}
+
+int getMinRemain(struct Process sProcesses[], int nY, int nCurrent)
+{
+    int i;
+    int minVal = MAX_INT;
+    int minIdx = -1;
+
+    for (i = 0; i < nY; i++)
+    {
+        if (sProcesses[i].nArrival <= nCurrent && sProcesses[i].nRemain > 0 && sProcesses[i].nRemain < minVal)
+        {
+            minIdx = i;
+            minVal = sProcesses[i].nRemain;
+        }
+    }
+
+    // printf("%d %d", minVal, minIdx);
+
+    if (isFinished(sProcesses, nY))
     {
         return -69; //-69 means all processes have 0 remaining time
     }
     else
     {
         // remaining times are zero
-        return sProcesses[minIndex].nRemain == 0 ? -1 : minIndex; //-1 means no process can be executed at the current given time
+        return minIdx; //-1 means no process can be executed at the current time
     }
 }
 
@@ -254,11 +283,13 @@ void initializeRemain(struct Process sProcesses[], int nY)
     }
 }
 
-int SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
+void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
-    int nCurrIdx, nPrevIdx;
-    int nTime = 0;
-    int nTotal = 0;
+    int nCurrIdx;
+    int nPrevIdx = -1;
+    int nCurrTime = 0;
+    int nTotalWait = 0;
+    int nBurstTime = 0;
     int nStart, nEnd;
 
     sortArrival(sProcesses, nY);
@@ -266,56 +297,197 @@ int SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     initializeOutput(sOutputs, nY);
     initializeRemain(sProcesses, nY);
 
-    // remaining processes
-    while ((nCurrIdx = getMinRemain(sProcesses, nY, nTime)) != -1)
-    {
-        sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
+    // https://www.geeksforgeeks.org/program-for-shortest-job-first-sjf-scheduling-set-2-preemptive/?ref=rp
 
-        if (nCurrIdx == 0)
+    // if same
+
+    // remaining processes
+
+    // check if same (nprev==idx)
+    // tick++
+
+    // check for != -1
+    //  calculate the burst time here
+
+    // Process 0 Arrival 0 Remaining 6
+    // Process 1 Arrival 10 Remaining 2
+
+    // 0 (P0) 6 (None) 10 (P1) 12
+
+    // 0
+    // nPrevIdx = -1 && nCurrIdx = 0
+
+    // 1-6
+    // nPrevIdx = nCurrIdx = 0
+
+    // 7
+    // nPrevIdx = 0 && nCurrIdx = -1
+
+    // 8 to 9
+    // nPrevIdx = nCurrIdx = -1
+
+    // 10
+    // nPrevIdx = -1 && nCurrIdx = 1
+
+    // 11 to 12
+    // nPrevIdx = nCurrIdx = 1
+
+    // Process 0 Arrival 0 Remaining 6
+    // Process 1 Arrival 1 Remaining 4
+    //  0 (P0) 1 (P1) 5 (P0) 11
+
+    // 0
+    // nPrevIdx = -1 && nCurrIdx = 0
+
+    // 1
+    // nPrevIdx = nCurrIdx = 0
+
+    // 2
+    // nPrevIdx = 0 && nCurrIdx = 1
+
+    // 3 to 5
+    // nPrevIdx = nCurrIdx = 1
+
+    // 6
+    // nPrevIdx = 1 && nCurrIdx = 0
+
+    // 7 to 10
+    // nPrevIdx = nCurrIdx = 1
+
+    while ((nCurrIdx = getMinRemain(sProcesses, nY, nCurrTime)) != -69)
+    {
+        printf("%d %d %d\n", nCurrTime, nPrevIdx, nCurrIdx);
+        // p  revIdx = 0, currIdx=-1
+        // if it is -1, it may still need to be saved
+        // if (nCurrIdx != -1)
+        // {
+        //  printf("%d %d", nPrevIdx, nCurrIdx);
+
+        // nCurrIdx and nPrevIdx are different processes
+        // if nPrevIdx is -1, then the previous process need not be saved
+        if (nCurrIdx != nPrevIdx && nPrevIdx != -1) // not same
         {
-            nStart = sProcesses[nCurrIdx].nArrival;
+            sOutputs[nPrevIdx].nPID = sProcesses[nPrevIdx].nPID;
+            // save the burst of the previous process to the output
+            nStart = sOutputs[nPrevIdx].pHead == NULL && sOutputs[nPrevIdx].pTail == NULL ? sProcesses[nPrevIdx].nArrival : sOutputs[nPrevIdx].pTail->nEnd;
+            nEnd = nStart + nBurstTime;
+            sOutputs[nPrevIdx].nWait += nStart - sProcesses[nPrevIdx].nArrival;
+
+            pushNode(&sOutputs[nPrevIdx], nStart, nEnd);
+
+            nTotalWait += sOutputs[nPrevIdx].nWait;
+
+            if (nCurrIdx != -1) // CPU is currently idle, no process can be executed
+            {
+                nBurstTime = 1;
+                sProcesses[nCurrIdx].nRemain--;
+            }
         }
         else
         {
-            nStart = sOutputs[nPrevIdx].pTail->nEnd > sProcesses[nCurrIdx].nArrival ? sOutputs[nPrevIdx].pTail->nEnd : sProcesses[nCurrIdx].nArrival; // max (sOutputs[nPrevIdx].pTail->nEnd, sProcesses[nCurrIdx].nArrival)
+            nBurstTime++;
+            sProcesses[nPrevIdx].nRemain--;
         }
-        sOutputs[nCurrIdx].nWait = sOutputs[nCurrIdx].pTail->nStart - sProcesses[nCurrIdx].nArrival;
-        nEnd = sOutputs[nCurrIdx].pTail->nStart + sProcesses[nCurrIdx].nBurst;
-
-        pushNode(&sOutputs[nCurrIdx], nStart, nEnd);
-
-        nTotal += sOutputs[nCurrIdx].nWait;
-
-        nTime++;
-        sProcesses[nCurrIdx].nRemain--;
+        // }
+        nCurrTime++;
         nPrevIdx = nCurrIdx;
+
+        if (nCurrTime == 100)
+            break;
+
+        // Question:
+        //  nRemain--, nPrevIdx
     }
+
+    sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
+    nStart = sOutputs[nCurrIdx].pHead == NULL && sOutputs[nCurrIdx].pTail == NULL ? sProcesses[nCurrIdx].nArrival : sOutputs[nCurrIdx].pTail->nEnd;
+    nEnd = nStart + nBurstTime;
+    sOutputs[nCurrIdx].nWait += nStart - sProcesses[nCurrIdx].nArrival;
+
+    pushNode(&sOutputs[nCurrIdx], nStart, nEnd);
+
+    nTotalWait += sOutputs[nCurrIdx].nWait;
+
+    // printOutput(sOutputs, nY);
+    // printf("galit na print");
+    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
 }
 
-int RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
+void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
 {
-    int isFinished = 1;
-    int nTotal = 0;
-    sortArrival(sProcesses, nY);
+    int isStandBy = 1;
+    int nTotalWait = 0;
+    int nStart, nEnd;
+    int nBurstTime;
+    int nCurrTime = 0;
 
-    while (!isFinished)
+    sortArrival(sProcesses, nY);
+    initializeOutput(sOutputs, nY);
+    initializeRemain(sProcesses, nY);
+
+    while (!isFinished(sProcesses, nY))
     {
-        isFinished = 1;
+        isStandBy = 1;
+
         for (int i = 0; i < nY; i++)
         {
-            if (sProcesses[i].nRemain > 0)
+            if (sProcesses[i].nRemain > 0 && sProcesses[i].nArrival <= nCurrTime)
             {
-                // -------------------- LINKED LIST WILL BE USED HERE ---------------------------
-                // sOutputs[i].nPID = sProcesses[i].nPID;
-                // sOutputs[i].nStart = sOutputs[i - 1].nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].nEnd, sProcesses[i].nArrival)
-                // sOutputs[i].nWait = sOutputs[i].nStart - sProcesses[i].nArrival;
-                // sOutputs[i].nEnd = sOutputs[i].nStart + sProcesses[i].nBurst;
-                // nTotal += sOutputs[i].nWait;
+                sOutputs[i].nPID = sProcesses[i].nPID;
 
-                isFinished = 0;
+                nStart = nCurrTime;
+
+                if (sProcesses[i].nRemain > nZ)
+                {
+                    nBurstTime = nZ;
+                }
+                else
+                {
+                    nBurstTime = sProcesses[i].nRemain;
+                }
+
+                nEnd = nStart + nBurstTime;
+                sProcesses[i].nRemain -= nBurstTime;
+                nCurrTime += nBurstTime;
+
+                pushNode(&sOutputs[i], nStart, nEnd);
+
+                if (sProcesses[i].nRemain == 0)
+                {
+                    sOutputs[i].nWait = sOutputs[i].pTail->nEnd - (sProcesses[i].nArrival + sProcesses[i].nBurst);
+                    nTotalWait += sOutputs[i].nWait;
+                }
+
+                isStandBy = 0;
             }
         }
+        if (isStandBy)
+        {
+            nCurrTime++;
+        }
     }
+
+    // Input
+    // Process ID: 0, Arrival Time: 0, Burst Time: 6
+    // Process ID: 1, Arrival Time: 2, Burst Time: 2
+
+    // Current Output
+    // P[0] Start time 0 End time: 2 | Start time 4 End time: 6 | Start time 6 End time: 8 | Waiting time: 2
+    // P[1] Start time 2 End time: 4 | Waiting time: 0
+
+    // P0 P1
+    // P0
+    // P0
+
+    // Question:
+    // P[0] Start time 0 End time: 2 | Start time 2 End time: 4 | Start time 6 End time: 8 | Waiting time: 2
+    // P[1] Start time 4 End time: 6 | Waiting time: 0
+
+    // P0
+    // P0 P1
+    // P0
+    printOutput(sOutputs, nY);
+    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
 }
 
 int main()
@@ -343,6 +515,8 @@ int main()
         {
             fscanf(pInput, "%d %d %d", &sProcesses[i].nPID, &sProcesses[i].nArrival, &sProcesses[i].nBurst);
         }
+
+        printProcesses(sProcesses, nY);
 
         switch (nX)
         {

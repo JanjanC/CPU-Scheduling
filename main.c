@@ -8,6 +8,8 @@
 
 // Question:
 // Good morning po ma'am, may I ask po if the input for the text file in MP1 should be "filename.txt" or simply "filename". Thank you very much po!
+// Round to decimal places
+// Assume positive integers
 
 struct Process
 {
@@ -211,7 +213,6 @@ void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     int nCurrIdx;
     int nCurrTime = 0;
     int nTotalWait = 0;
-    int nBurstTime;
     int nStart, nEnd;
 
     sortArrival(sProcesses, nY);
@@ -381,6 +382,7 @@ int main()
             fscanf(pInput, "%d %d %d", &sProcesses[i].nPID, &sProcesses[i].nArrival, &sProcesses[i].nBurst);
         }
 
+        // For Testing
         printProcesses(sProcesses, nY);
 
         switch (nX)

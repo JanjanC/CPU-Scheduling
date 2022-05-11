@@ -69,34 +69,6 @@ void pushNode(struct Output *sOutput, int nStart, int nEnd)
     }
 }
 
-// sort by burst time, break
-void sortBurst(struct Process sProcesses[], int nY)
-{
-    int i, j;
-    struct Process sTemp;
-    for (i = 0; i < nY - 1; i++)
-    {
-        for (j = i + 1; j < nY; j++)
-        {
-            if (sProcesses[i].nBurst > sProcesses[j].nBurst)
-            {
-                sTemp = sProcesses[i];
-                sProcesses[i] = sProcesses[j];
-                sProcesses[j] = sTemp;
-            }
-            else if (sProcesses[i].nBurst == sProcesses[j].nBurst)
-            {
-                if (sProcesses[i].nArrival > sProcesses[j].nArrival)
-                {
-                    sTemp = sProcesses[i];
-                    sProcesses[i] = sProcesses[j];
-                    sProcesses[j] = sTemp;
-                }
-            }
-        }
-    }
-}
-
 void sortArrival(struct Process sProcesses[], int nY)
 {
     int i, j;
@@ -195,39 +167,6 @@ void FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
     printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
 }
 
-void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
-{
-    int i;
-    int nTotalWait = 0;
-    int nStart, nEnd;
-
-    sortBurst(sProcesses, nY);
-
-    initializeOutput(sOutputs, nY);
-
-    for (i = 0; i < nY; i++)
-    {
-        sOutputs[i].nPID = sProcesses[i].nPID;
-        if (i == 0)
-        {
-            nStart = sProcesses[i].nArrival;
-        }
-        else
-        {
-            nStart = sOutputs[i - 1].pTail->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pTail->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pTail->nEnd, sProcesses[i].nArrival)
-        }
-        nEnd = nStart + sProcesses[i].nBurst;
-        sOutputs[i].nWait = nStart - sProcesses[i].nArrival;
-
-        pushNode(&sOutputs[i], nStart, nEnd);
-
-        nTotalWait += sOutputs[i].nWait;
-    }
-
-    printOutput(sOutputs, nY);
-    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
-}
-
 int isFinished(struct Process sProcesses[], int nY)
 {
     int i;
@@ -255,15 +194,7 @@ int getMinRemain(struct Process sProcesses[], int nY, int nCurrent)
         }
     }
 
-    if (isFinished(sProcesses, nY))
-    {
-        return -69; //-69 means all processes have 0 remaining time
-    }
-    else
-    {
-        // remaining times are zero
-        return minIdx; //-1 means no process can be executed at the current time
-    }
+    return isFinished(sProcesses, nY) ? -1 : minIdx; //-1 means all processes have 0 remaining time or no process can be executed at the current time
 }
 
 void initializeRemain(struct Process sProcesses[], int nY)
@@ -273,6 +204,46 @@ void initializeRemain(struct Process sProcesses[], int nY)
     {
         sProcesses[i].nRemain = sProcesses[i].nBurst;
     }
+}
+
+void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
+{
+    int nCurrIdx;
+    int nCurrTime = 0;
+    int nTotalWait = 0;
+    int nBurstTime;
+    int nStart, nEnd;
+
+    sortArrival(sProcesses, nY);
+
+    initializeOutput(sOutputs, nY);
+    initializeRemain(sProcesses, nY);
+
+    while (!isFinished(sProcesses, nY))
+    {
+        nCurrIdx = getMinRemain(sProcesses, nY, nCurrTime);
+        if (nCurrIdx >= 0)
+        {
+            sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
+            nStart = nCurrTime;
+            nEnd = nStart + sProcesses[nCurrIdx].nBurst;
+
+            nCurrTime += sProcesses[nCurrIdx].nBurst;
+            sProcesses[nCurrIdx].nRemain -= sProcesses[nCurrIdx].nBurst;
+
+            pushNode(&sOutputs[nCurrIdx], nStart, nEnd);
+
+            sOutputs[nCurrIdx].nWait = nStart - sProcesses[nCurrIdx].nArrival;
+            nTotalWait += sOutputs[nCurrIdx].nWait;
+        }
+        else
+        {
+            nCurrTime++;
+        }
+    }
+
+    printOutput(sOutputs, nY);
+    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
 }
 
 void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)

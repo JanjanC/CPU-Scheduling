@@ -327,6 +327,7 @@ void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 
 void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
 {
+    int i;
     int isStandBy = 1;
     int nTotalWait = 0;
     int nStart, nEnd;
@@ -341,7 +342,7 @@ void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
     {
         isStandBy = 1;
 
-        for (int i = 0; i < nY; i++)
+        for (i = 0; i < nY; i++)
         {
             if (sProcesses[i].nRemain > 0 && sProcesses[i].nArrival <= nCurrTime)
             {

@@ -74,36 +74,52 @@ void pushNode(struct Output *sOutput, int nStart, int nEnd)
 void sortArrival(struct Process sProcesses[], int nY)
 {
     int i, j;
-    struct Process sTemp;
+    int minIdx;
+    struct Process minVal;
     for (i = 0; i < nY - 1; i++)
     {
+        minIdx = i;
         for (j = i + 1; j < nY; j++)
         {
-            if (sProcesses[i].nArrival > sProcesses[j].nArrival)
+            if (sProcesses[j].nArrival < sProcesses[minIdx].nArrival)
             {
-                sTemp = sProcesses[i];
-                sProcesses[i] = sProcesses[j];
-                sProcesses[j] = sTemp;
+                minIdx = j;
             }
         }
+
+        minVal = sProcesses[minIdx];
+        while (i < minIdx)
+        {
+            sProcesses[minIdx] = sProcesses[minIdx - 1];
+            minIdx--;
+        }
+        sProcesses[i] = minVal;
     }
 }
 
 void sortID(struct Output sOutputs[], int nY)
 {
     int i, j;
-    struct Output sTemp;
+    int minIdx;
+    struct Output minVal;
     for (i = 0; i < nY - 1; i++)
     {
+        minIdx = i;
         for (j = i + 1; j < nY; j++)
         {
-            if (sOutputs[i].nPID > sOutputs[j].nPID)
+            if (sOutputs[j].nPID < sOutputs[minIdx].nPID)
             {
-                sTemp = sOutputs[i];
-                sOutputs[i] = sOutputs[j];
-                sOutputs[j] = sTemp;
+                minIdx = j;
             }
         }
+
+        minVal = sOutputs[minIdx];
+        while (i < minIdx)
+        {
+            sOutputs[minIdx] = sOutputs[minIdx - 1];
+            minIdx--;
+        }
+        sOutputs[i] = minVal;
     }
 }
 
@@ -113,7 +129,7 @@ void printProcesses(struct Process sProcesses[], int nY)
     int i;
     for (i = 0; i < nY; i++)
     {
-        printf("Process ID: %d, Arrival Time: %d, Burst Time: %d\n", sProcesses[i].nPID, sProcesses[i].nArrival, sProcesses[i].nBurst, sProcesses[i].nRemain);
+        printf("Process ID: %d, Arrival Time: %d, Burst Time: %d\n", sProcesses[i].nPID, sProcesses[i].nArrival, sProcesses[i].nBurst);
     }
 }
 
@@ -166,7 +182,7 @@ void FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
     }
 
     printOutput(sOutputs, nY);
-    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
+    printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
 int isFinished(struct Process sProcesses[], int nY)
@@ -244,7 +260,7 @@ void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     }
 
     printOutput(sOutputs, nY);
-    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
+    printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
 void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
@@ -294,7 +310,7 @@ void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     }
 
     printOutput(sOutputs, nY);
-    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
+    printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
 void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
@@ -353,7 +369,7 @@ void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
     }
 
     printOutput(sOutputs, nY);
-    printf("Average waiting time: %.2lf\n", 1.0 * nTotalWait / nY);
+    printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
 int main()

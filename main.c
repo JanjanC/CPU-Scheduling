@@ -2,14 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_STRING 25
+#define MAX_STRING 50
 #define MAX_PROCESS 100
 #define MAX_INT 2147483647
-
-// Question:
-// Good morning po ma'am, may I ask po if the input for the text file in MP1 should be "filename.txt" or simply "filename". Thank you very much po!
-// Round to decimal places
-// Assume positive integers
 
 struct Process
 {
@@ -22,8 +17,8 @@ struct Process
 struct Output
 {
     int nPID;
-    struct Node *pHead;
-    struct Node *pTail;
+    struct Node *pHead; // pointer to the head of the linked list
+    struct Node *pTail; // pointer to the tail of the linked list
     int nWait;
 };
 
@@ -31,9 +26,12 @@ struct Node
 {
     int nStart;
     int nEnd;
-    struct Node *pNext;
+    struct Node *pNext; // pointer to the next element of the linked list
 };
 
+// This function initializes the values of the elements in the output array
+// sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes.
+// nY           The length of the sOutputs array
 void initializeOutput(struct Output sOutputs[], int nY)
 {
     int i;
@@ -45,37 +43,49 @@ void initializeOutput(struct Output sOutputs[], int nY)
     }
 }
 
+// This function pushes a node which contains the start time and end time
+// *sOutput     A pointer to a struct Output which contains records the process ID, start time, end time, and wait time of a process.
+// nStart       The start time of a process
+// nEnd         The end time of a a process
 void pushNode(struct Output *sOutput, int nStart, int nEnd)
 {
     struct Node *pTemp;
-    if ((pTemp = malloc(sizeof(struct Node))) == NULL)
+
+    if ((pTemp = malloc(sizeof(struct Node))) == NULL) // a node cannot be created
     {
         printf("ERROR : not enough memory\n");
     }
     else
     {
+        // set the values of the node
         pTemp->nStart = nStart;
         pTemp->nEnd = nEnd;
         pTemp->pNext = NULL;
 
-        if (sOutput->pHead == NULL && sOutput->pTail == NULL)
+        if (sOutput->pHead == NULL && sOutput->pTail == NULL) // the linked list is currently empty
         {
+            // points the head and tail to the newly created node
             sOutput->pHead = pTemp;
             sOutput->pTail = pTemp;
         }
         else
         {
-            sOutput->pTail->pNext = pTemp;
-            sOutput->pTail = pTemp;
+            sOutput->pTail->pNext = pTemp; // inserts the newly created node to the end of the linked list
+            sOutput->pTail = pTemp;        // points the tail to the newly created node
         }
     }
 }
 
+// This function sort the processes according to their arrival time
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes.
+// nY           The length of the sProcesses array
 void sortArrival(struct Process sProcesses[], int nY)
 {
     int i, j;
     int minIdx;
     struct Process minVal;
+
+    // stable selection sort algorithm
     for (i = 0; i < nY - 1; i++)
     {
         minIdx = i;
@@ -97,11 +107,16 @@ void sortArrival(struct Process sProcesses[], int nY)
     }
 }
 
+// This function sort the processes according to their process ID
+// sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes.
+// nY           The length of the sOutputs array
 void sortID(struct Output sOutputs[], int nY)
 {
     int i, j;
     int minIdx;
     struct Output minVal;
+
+    // stable selection sort algorithm
     for (i = 0; i < nY - 1; i++)
     {
         minIdx = i;
@@ -123,7 +138,9 @@ void sortID(struct Output sOutputs[], int nY)
     }
 }
 
-// For Testing
+// This function prints the information of the processes. Note that this function is created for testing purposes only
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// nY           The length of the sProcesses array
 void printProcesses(struct Process sProcesses[], int nY)
 {
     int i;
@@ -133,6 +150,9 @@ void printProcesses(struct Process sProcesses[], int nY)
     }
 }
 
+// This function prints the given information of the outputs, sorted by their process ID
+// sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes
+// nY           The length of the sOutputs array
 void printOutput(struct Output sOutputs[], int nY)
 {
     int i;
@@ -142,7 +162,9 @@ void printOutput(struct Output sOutputs[], int nY)
     for (i = 0; i < nY; i++)
     {
         printf("P[%d] ", sOutputs[i].nPID);
+
         struct Node *pCurrent = sOutputs[i].pHead;
+        // traverse the linked list
         while (pCurrent != NULL)
         {
             printf("Start time %d End time: %d | ", pCurrent->nStart, pCurrent->nEnd);
@@ -152,6 +174,10 @@ void printOutput(struct Output sOutputs[], int nY)
     }
 }
 
+// This function implements the First Come First Serve scheduling algorithm
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes
+// nY           The length of the sProcesses array
 void FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
     int i;
@@ -165,11 +191,12 @@ void FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
     for (i = 0; i < nY; i++)
     {
         sOutputs[i].nPID = sProcesses[i].nPID;
-        if (i == 0)
+
+        if (i == 0) // it is the first process to be executed
         {
             nStart = sProcesses[i].nArrival;
         }
-        else
+        else // it is NOT the first process to be executed
         {
             nStart = sOutputs[i - 1].pTail->nEnd > sProcesses[i].nArrival ? sOutputs[i - 1].pTail->nEnd : sProcesses[i].nArrival; // max (sOutputs[i - 1].pTail->nEnd, sProcesses[i].nArrival)
         }
@@ -185,18 +212,27 @@ void FCFS(struct Process sProcesses[], struct Output sOutputs[], int nY)
     printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
+// This function checks if all processes have finished executing based on their remaining time
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// nY           The length of the sProcesses array
+// Returns 1 if finished; otherwise, returns 0
 int isFinished(struct Process sProcesses[], int nY)
 {
     int i;
     for (i = 0; i < nY; i++)
     {
-        if (sProcesses[i].nRemain != 0)
-            return 0; // 0 - not yet finished
+        if (sProcesses[i].nRemain != 0) // the process is finished if its remaining time is 0
+            return 0;                   // 0 - not yet finished
     }
 
     return 1; // 1 - is finished
 }
 
+// This function determines the process with the minimum remaining time
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// nY           The length of the sProcesses array
+// nCurrent     The current time counter of the CPU
+// Returns the index of the process with the minimum remaining time
 int getMinRemain(struct Process sProcesses[], int nY, int nCurrent)
 {
     int i;
@@ -205,6 +241,10 @@ int getMinRemain(struct Process sProcesses[], int nY, int nCurrent)
 
     for (i = 0; i < nY; i++)
     {
+        // the following conditions must be satisfied before being considered for the minimum remaining time
+        // (1) the process has already arrived
+        // (2) the process has not finished executing
+        // (3) the remaining time of the process is less than the current minimum remaining time
         if (sProcesses[i].nArrival <= nCurrent && sProcesses[i].nRemain > 0 && sProcesses[i].nRemain < minVal)
         {
             minIdx = i;
@@ -212,9 +252,12 @@ int getMinRemain(struct Process sProcesses[], int nY, int nCurrent)
         }
     }
 
-    return isFinished(sProcesses, nY) ? -1 : minIdx; //-1 means all processes have 0 remaining time or no process can be executed at the current time
+    return isFinished(sProcesses, nY) ? -1 : minIdx; //-1 means all processes have 0 remaining time (i.e., is finished) or no process can be executed at the current time
 }
 
+// This function initializes the remain variables in the sProcesses[]
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// nY           The length of the sProcesses array
 void initializeRemain(struct Process sProcesses[], int nY)
 {
     int i;
@@ -224,6 +267,10 @@ void initializeRemain(struct Process sProcesses[], int nY)
     }
 }
 
+// This function implements the Shortest Job First scheduling algorithm
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes
+// nY           The length of the sProcesses array
 void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
     int nCurrIdx;
@@ -236,24 +283,24 @@ void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     initializeOutput(sOutputs, nY);
     initializeRemain(sProcesses, nY);
 
-    while (!isFinished(sProcesses, nY))
+    while (!isFinished(sProcesses, nY)) // repeats the loop while there is a process that has not yet finished executing
     {
-        nCurrIdx = getMinRemain(sProcesses, nY, nCurrTime);
-        if (nCurrIdx >= 0)
+        nCurrIdx = getMinRemain(sProcesses, nY, nCurrTime); // gets the index of the process to be executed
+        if (nCurrIdx >= 0)                                  // a process can be executed at the current time
         {
             sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
             nStart = nCurrTime;
             nEnd = nStart + sProcesses[nCurrIdx].nBurst;
 
-            nCurrTime += sProcesses[nCurrIdx].nBurst;
-            sProcesses[nCurrIdx].nRemain -= sProcesses[nCurrIdx].nBurst;
+            nCurrTime += sProcesses[nCurrIdx].nBurst;                    // adds the burst time to the current time
+            sProcesses[nCurrIdx].nRemain -= sProcesses[nCurrIdx].nBurst; // subtract the burst time that was executed from the remaining time
 
             pushNode(&sOutputs[nCurrIdx], nStart, nEnd);
 
             sOutputs[nCurrIdx].nWait = nStart - sProcesses[nCurrIdx].nArrival;
             nTotalWait += sOutputs[nCurrIdx].nWait;
         }
-        else
+        else // no process can be executed at the current time
         {
             nCurrTime++;
         }
@@ -263,6 +310,10 @@ void SJF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
+// This function implements the Shortest Remaining Time First scheduling algorithm
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes
+// nY           The length of the sProcesses array
 void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 {
     int nCurrIdx;
@@ -276,17 +327,17 @@ void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     initializeOutput(sOutputs, nY);
     initializeRemain(sProcesses, nY);
 
-    while (!isFinished(sProcesses, nY))
+    while (!isFinished(sProcesses, nY)) // repeats the loop while there is a process that has not yet finished executing
     {
-        nCurrIdx = getMinRemain(sProcesses, nY, nCurrTime);
-        if (nCurrIdx >= 0)
+        nCurrIdx = getMinRemain(sProcesses, nY, nCurrTime); // gets the index of the process to be executed
+        if (nCurrIdx >= 0)                                  // a process can be executed at the current time
         {
             sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
             nStart = nCurrTime;
 
             nBurstTime = 0;
 
-            while (getMinRemain(sProcesses, nY, nCurrTime) == nCurrIdx)
+            while (getMinRemain(sProcesses, nY, nCurrTime) == nCurrIdx) // repeats the loop while the process to be executed is the same after increasing the time counter by 1
             {
                 nCurrTime++;
                 nBurstTime++;
@@ -297,13 +348,13 @@ void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 
             pushNode(&sOutputs[nCurrIdx], nStart, nEnd);
 
-            if (sProcesses[nCurrIdx].nRemain == 0)
+            if (sProcesses[nCurrIdx].nRemain == 0) // computes the wait time when the process has fully finished executing
             {
                 sOutputs[nCurrIdx].nWait = sOutputs[nCurrIdx].pTail->nEnd - (sProcesses[nCurrIdx].nArrival + sProcesses[nCurrIdx].nBurst);
                 nTotalWait += sOutputs[nCurrIdx].nWait;
             }
         }
-        else
+        else // no process can be executed at the current time
         {
             nCurrTime++;
         }
@@ -313,6 +364,11 @@ void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
+// This function implements the Round Robin scheduling algorithm
+// sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
+// sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes
+// nY           The length of the sProcesses array
+// nZ           The time slice value
 void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
 {
     int i;
@@ -326,43 +382,47 @@ void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
     initializeOutput(sOutputs, nY);
     initializeRemain(sProcesses, nY);
 
-    while (!isFinished(sProcesses, nY))
+    while (!isFinished(sProcesses, nY)) // repeats the loop while there is a process that has not yet finished executing
     {
-        isStandBy = 1;
+        isStandBy = 1; // 1 means no process has been executed
 
         for (i = 0; i < nY; i++)
         {
+            // (1) the process has not finished executing
+            // (2) the process has already arrived
             if (sProcesses[i].nRemain > 0 && sProcesses[i].nArrival <= nCurrTime)
             {
                 sOutputs[i].nPID = sProcesses[i].nPID;
 
                 nStart = nCurrTime;
 
+                // the remaining time is greater than the time slice, thus the burst time is equal to the time slice
                 if (sProcesses[i].nRemain > nZ)
                 {
                     nBurstTime = nZ;
                 }
+                // the remaining time is less than the time slice, thus the burst time is equal to the remaining time
                 else
                 {
                     nBurstTime = sProcesses[i].nRemain;
                 }
 
                 nEnd = nStart + nBurstTime;
-                sProcesses[i].nRemain -= nBurstTime;
-                nCurrTime += nBurstTime;
+                sProcesses[i].nRemain -= nBurstTime; // subtract the burst time that was executed from the remaining time
+                nCurrTime += nBurstTime;             // adds the burst time to the current time
 
                 pushNode(&sOutputs[i], nStart, nEnd);
 
-                if (sProcesses[i].nRemain == 0)
+                if (sProcesses[i].nRemain == 0) // computes the wait time when the process has fully finished executing
                 {
                     sOutputs[i].nWait = sOutputs[i].pTail->nEnd - (sProcesses[i].nArrival + sProcesses[i].nBurst);
                     nTotalWait += sOutputs[i].nWait;
                 }
 
-                isStandBy = 0;
+                isStandBy = 0; // 0 means a process has been executed
             }
         }
-        if (isStandBy)
+        if (isStandBy) // increases the time counter when no process has been executed at the current time
         {
             nCurrTime++;
         }
@@ -384,22 +444,27 @@ int main()
     fgets(sFilename, MAX_STRING, stdin);
 
     sFilename[strlen(sFilename) - 1] = '\0'; // replace \n with \0
+    strcat(sFilename, ".txt");
 
     if ((pInput = fopen(sFilename, "r")) != NULL) // the file exists
     {
 
+        // reads the value of X, Y, and Z from the text file
         fscanf(pInput, "%d %d %d", &nX, &nY, &nZ);
 
         if (nX != 3)
+        {
             nZ = 1;
+        }
 
+        // stores the process ID, arrival time, and burst time to the process array
         for (i = 0; i < nY; i++)
         {
             fscanf(pInput, "%d %d %d", &sProcesses[i].nPID, &sProcesses[i].nArrival, &sProcesses[i].nBurst);
         }
 
-        // For Testing
-        printProcesses(sProcesses, nY);
+        // Prints the contents of the processes (for testing purposes)
+        // printProcesses(sProcesses, nY);
 
         switch (nX)
         {
@@ -416,7 +481,7 @@ int main()
             RR(sProcesses, sOutputs, nY, nZ);
             break;
         default:
-            printf("Invalid CPU Schedule Algorithm");
+            printf("Invalid CPU Scheduling Algorithm");
         }
 
         fclose(pInput);
@@ -425,6 +490,5 @@ int main()
     {
         printf("%s not found.", sFilename);
     }
-
     return 0;
 }

@@ -167,7 +167,7 @@ void printOutput(struct Output sOutputs[], int nY)
         // traverse the linked list
         while (pCurrent != NULL)
         {
-            printf("Start time %d End time: %d | ", pCurrent->nStart, pCurrent->nEnd);
+            printf("Start time: %d End time: %d | ", pCurrent->nStart, pCurrent->nEnd);
             pCurrent = pCurrent->pNext;
         }
         printf("Waiting time: %d\n", sOutputs[i].nWait);

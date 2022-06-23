@@ -364,6 +364,21 @@ void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
     printf("Average waiting time: %.1lf\n", 1.0 * nTotalWait / nY);
 }
 
+int getProcessIdx(struct Process sProcesses[], int nY, struct Process sProcess)
+{
+    int i;
+    for (i = 0; i < nY; i++)
+    {
+        // printf("sProcesses[i].nPID %d", sProcesses[i].nPID);
+        // printf("sProcess.nPID %d", sProcess.nPID);
+        if (sProcesses[i].nPID == sProcess.nPID)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 // This function implements the Round Robin scheduling algorithm
 // sProcesses[] The struct Process array which records the process ID, arrival time, burst time, and remaining time of the processes
 // sOutputs[]   The struct Output array which records the process ID, start time, end time, and wait time of the processes
@@ -371,58 +386,89 @@ void SRTF(struct Process sProcesses[], struct Output sOutputs[], int nY)
 // nZ           The time slice value
 void RR(struct Process sProcesses[], struct Output sOutputs[], int nY, int nZ)
 {
-    int i;
-    int isStandBy = 1;
-    int nTotalWait = 0;
-    int nStart, nEnd;
-    int nBurstTime;
+    int nHeadIdx = 0;   // pointer to the head of the queue
+    int nTailIdx = 0;   // pointer to the tail of the queue
+    int nArriveIdx = 0; // index of the last element that arrived
+    int nCurrIdx;
     int nCurrTime = 0;
+    int nTotalWait = 0;
+    int nBurstTime;
+    int nStart, nEnd;
+
+    int i;
+
+    // the maximum capacity of the queue using this implementation is N-1
+    // since there may be at most nY process in the queue, the size of the queue is thus set to nY+1
+    struct Process *pQueue = malloc(sizeof(struct Process) * (nY + 1));
 
     sortArrival(sProcesses, nY);
+
     initializeOutput(sOutputs, nY);
     initializeRemain(sProcesses, nY);
 
     while (!isFinished(sProcesses, nY)) // repeats the loop while there is a process that has not yet finished executing
     {
-        isStandBy = 1; // 1 means no process has been executed
 
-        for (i = 0; i < nY; i++)
+        // check if a new process has arrived (NOTE: SAME CODE AS BELOW)
+        for (i = nArriveIdx; i < nY; i++)
         {
-            // (1) the process has not finished executing
-            // (2) the process has already arrived
-            if (sProcesses[i].nRemain > 0 && sProcesses[i].nArrival <= nCurrTime)
+            if (sProcesses[i].nArrival <= nCurrTime)
             {
-                sOutputs[i].nPID = sProcesses[i].nPID;
-
-                nStart = nCurrTime;
-
-                // the remaining time is greater than the time slice, thus the burst time is equal to the time slice
-                if (sProcesses[i].nRemain > nZ)
-                {
-                    nBurstTime = nZ;
-                }
-                // the remaining time is less than the time slice, thus the burst time is equal to the remaining time
-                else
-                {
-                    nBurstTime = sProcesses[i].nRemain;
-                }
-
-                nEnd = nStart + nBurstTime;
-                sProcesses[i].nRemain -= nBurstTime; // subtract the burst time that was executed from the remaining time
-                nCurrTime += nBurstTime;             // adds the burst time to the current time
-
-                pushNode(&sOutputs[i], nStart, nEnd);
-
-                if (sProcesses[i].nRemain == 0) // computes the wait time when the process has fully finished executing
-                {
-                    sOutputs[i].nWait = sOutputs[i].pTail->nEnd - (sProcesses[i].nArrival + sProcesses[i].nBurst);
-                    nTotalWait += sOutputs[i].nWait;
-                }
-
-                isStandBy = 0; // 0 means a process has been executed
+                pQueue[nTailIdx] = sProcesses[i];
+                nTailIdx = (nTailIdx + 1) % (nY + 1);
+                nArriveIdx++;
             }
         }
-        if (isStandBy) // increases the time counter when no process has been executed at the current time
+
+        if (nHeadIdx != nTailIdx) // the queue is not empty
+        {
+
+            nCurrIdx = getProcessIdx(sProcesses, nY, pQueue[nHeadIdx]); // find the index of the current process in the sProcesses array
+            nHeadIdx = (nHeadIdx + 1) % (nY + 1);
+
+            sOutputs[nCurrIdx].nPID = sProcesses[nCurrIdx].nPID;
+            nStart = nCurrTime;
+
+            if (sProcesses[nCurrIdx].nRemain > nZ)
+            {
+                nBurstTime = nZ;
+            }
+            else // the remaining time is less than the time slice, thus the burst time is equal to the remaining time
+            {
+                nBurstTime = sProcesses[nCurrIdx].nRemain;
+            }
+
+            nEnd = nStart + nBurstTime;
+            sProcesses[nCurrIdx].nRemain -= nBurstTime; // subtract the burst time that was executed from the remaining time
+            nCurrTime += nBurstTime;
+
+            pushNode(&sOutputs[nCurrIdx], nStart, nEnd);
+
+            // check if a new process has arrived (NOTE: SAME CODE AS ABOVE)
+            for (i = nArriveIdx; i < nY; i++)
+            {
+                if (sProcesses[i].nArrival <= nCurrTime)
+                {
+                    pQueue[nTailIdx] = sProcesses[i];
+                    nTailIdx = (nTailIdx + 1) % (nY + 1);
+                    nArriveIdx++;
+                }
+            }
+
+            // add the process to the back of the queue if it is not yet finished
+            if (sProcesses[nCurrIdx].nRemain > 0)
+            {
+                pQueue[nTailIdx] = sProcesses[nCurrIdx];
+                nTailIdx = (nTailIdx + 1) % (nY + 1);
+            }
+
+            if (sProcesses[nCurrIdx].nRemain == 0) // computes the wait time when the process has fully finished executing
+            {
+                sOutputs[nCurrIdx].nWait = sOutputs[nCurrIdx].pTail->nEnd - (sProcesses[nCurrIdx].nArrival + sProcesses[nCurrIdx].nBurst);
+                nTotalWait += sOutputs[nCurrIdx].nWait;
+            }
+        }
+        else // the queue is empty; no process can be executed at the current time
         {
             nCurrTime++;
         }
